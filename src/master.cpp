@@ -93,18 +93,137 @@ void masterSequential(ConfigData* data, float* pixels)
     std::cout << "C-to-C Ratio: " << c2cRatio << std::endl;
 }
 
-void masterStaticContinuousColumns(ConfigData* data) {
+void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
+    //Start computation timer.
+    double computationStart = MPI_Wtime();
+
+    // Compute our portion of the region
+    // Describe our region
+    RenderRegion region;
+    //region.xInImage = TODO
+    //region.yInImage = TODO
+    region.xInPixels = 0;
+    region.yInPixels = 0;
+    //region.width = TODO
+    //region.height = TODO
+    region.pixelsWidth = region.width;
+    region.pixelsHeight = region.height;
+
+    region.pixels = pixels;
+
+    // Render our region
+    renderRegion(data, &region);
+
+    // Stop computation timer
+    double computationStop = MPI_Wtime();
+    double computationTime = computationStop - computationStart;
+
+    // Start communication timer
+    double communicationStart = MPI_Wtime();
+    
+    // Recieve subregions
     // TODO
+
+    // Stop communication timer
+    double communicationStop = MPI_Wtime();
+    double communicationTime = communicationStop - communicationStart;
+
+    // Print times & c-to-c ratio
+    // Copied from given sequential code
+    std::cout << "Total Computation Time: " << computationTime << " seconds" << std::endl;
+    std::cout << "Total Communication Time: " << communicationTime << " seconds" << std::endl;
+    double c2cRatio = communicationTime / computationTime;
+    std::cout << "C-to-C Ratio: " << c2cRatio << std::endl;
 }
 
-void masterStaticSquareBlocks(ConfigData* data) {
+void masterStaticSquareBlocks(ConfigData* data, float* pixels) {
+    //Start computation timer.
+    double computationStart = MPI_Wtime();
+
+    // Compute our portion of the region
+    // Describe our region
+    RenderRegion region;
+    //region.xInImage = TODO
+    //region.yInImage = TODO
+    region.xInPixels = 0;
+    region.yInPixels = 0;
+    //region.width = TODO
+    //region.height = TODO
+    region.pixelsWidth = region.width;
+    region.pixelsHeight = region.height;
+
+    region.pixels = pixels;
+
+    // Render our region
+    renderRegion(data, &region);
+
+    // Stop computation timer
+    double computationStop = MPI_Wtime();
+    double computationTime = computationStop - computationStart;
+
+    // Start communication timer
+    double communicationStart = MPI_Wtime();
+    
+    // Recieve subregions
     // TODO
+
+    // Stop communication timer
+    double communicationStop = MPI_Wtime();
+    double communicationTime = communicationStop - communicationStart;
+
+    // Print times & c-to-c ratio
+    // Copied from given sequential code
+    std::cout << "Total Computation Time: " << computationTime << " seconds" << std::endl;
+    std::cout << "Total Communication Time: " << communicationTime << " seconds" << std::endl;
+    double c2cRatio = communicationTime / computationTime;
+    std::cout << "C-to-C Ratio: " << c2cRatio << std::endl;
 }
 
-void masterStaticCyclicalRows(ConfigData* data) {
-    // TODO
+void masterStaticCyclicalRows(ConfigData* data, float* pixels) {
+    //Start computation timer.
+    double computationStart = MPI_Wtime();
+
+    // Compute our portion of the region
+    // Describe our region
+    RenderRegion region;
+    //region.xInImage = TODO
+    //region.yInImage = TODO
+    region.xInPixels = 0;
+    region.yInPixels = 0;
+    //region.width = TODO
+    //region.height = TODO
+    //region.pixelsWidth = TODO
+    //region.pixelsHeight = TODO
+
+    region.pixels = pixels;
+
+    // Render our region
+    // TODO - some kind of loop which does each of our sub-regions
+
+    // Stop computation timer
+    double computationStop = MPI_Wtime();
+    double computationTime = computationStop - computationStart;
+
+    // Start communication timer
+    double communicationStart = MPI_Wtime();
+    
+    // Recieve subregions
+    // TODO - will be a bit more complicated as slaves pack their subregions
+    // Might change to have slaves send each of their subregions separately,
+    // but that makes timing things more annoying
+
+    // Stop communication timer
+    double communicationStop = MPI_Wtime();
+    double communicationTime = communicationStop - communicationStart;
+
+    // Print times & c-to-c ratio
+    // Copied from given sequential code
+    std::cout << "Total Computation Time: " << computationTime << " seconds" << std::endl;
+    std::cout << "Total Communication Time: " << communicationTime << " seconds" << std::endl;
+    double c2cRatio = communicationTime / computationTime;
+    std::cout << "C-to-C Ratio: " << c2cRatio << std::endl;
 }
 
-void masterDynamicCentralizedQueue(ConfigData* data) {
+void masterDynamicCentralizedQueue(ConfigData* data, float* pixels) {
     // TODO
 }

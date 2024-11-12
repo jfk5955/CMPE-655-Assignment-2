@@ -104,7 +104,7 @@ void slaveStaticCyclicalRows(ConfigData* data) {
     region.pixels = new float[pixelsSize];
 
     // Render our region
-    // TODO - some kind of loop which does each sub-region
+    // TODO - some kind of loop which does each of our sub-regions
 
     // Send our results
     comp_stop = MPI_Wtime();
