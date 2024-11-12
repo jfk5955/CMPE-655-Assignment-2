@@ -36,6 +36,13 @@ void masterMain(ConfigData* data)
             masterSequential(data, pixels);
             stopTime = MPI_Wtime();
             break;
+        
+        case PART_MODE_STATIC_STRIPS_VERTICAL:
+            startTime = MPI_Wtime();
+            masterStaticContinuousColumns(data, pixels);
+            stopTime = MPI_Wtime();
+            break;
+
         default:
             std::cout << "This mode (" << data->partitioningMode;
             std::cout << ") is not currently implemented." << std::endl;
@@ -94,24 +101,30 @@ void masterSequential(ConfigData* data, float* pixels)
 }
 
 void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
+    MPI_Status status;
+    int tasks;
+    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
+
     //Start computation timer.
     double computationStart = MPI_Wtime();
+
+    int subregionWidth = data->width / tasks;
+    int subregionRemainder = data->width % tasks;
 
     // Compute our portion of the region
     // Describe our region
     RenderRegion region;
-    //region.xInImage = TODO
-    //region.yInImage = TODO
+    region.xInImage = 0;
+    region.yInImage = 0;
     region.xInPixels = 0;
     region.yInPixels = 0;
-    //region.width = TODO
-    //region.height = TODO
-    region.pixelsWidth = region.width;
-    region.pixelsHeight = region.height;
-
+    region.width = subregionWidth;
+    region.height = data->height;
+    region.pixelsWidth = data->width;
+    region.pixelsHeight = data->height;
     region.pixels = pixels;
 
-    // Render our region
+    // Render our subregion
     renderRegion(data, &region);
 
     // Stop computation timer
@@ -122,7 +135,29 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
     double communicationStart = MPI_Wtime();
     
     // Recieve subregions
-    // TODO
+    // Buffer with enough space for the largest subregion and the time report
+    float* recieveBuffer = new float[(3 * (subregionWidth + subregionRemainder) * data->height) + 1];
+    for(int i = 1; i < tasks; i++) {
+        // Recieve data from slave
+        int recieveSize = (3 * subregionWidth * data->height) + 1;
+        
+        if(i == tasks - 1) {
+            // Last slave has remainder as well
+            recieveSize += 3 * subregionRemainder * data->height;
+        }
+
+        MPI_Recv(recieveBuffer, recieveSize, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
+        
+        // Include slave computation time
+        computationTime += (double) recieveBuffer[recieveSize - 1];
+
+        // Determine location in output
+        int slaveXInImage = subregionWidth * i;
+        int offset = slaveXInImage * data->width;
+
+        // Copy into output buffer
+        memcopy(&(pixels[offset]), recieveBuffer, (recieveSize - 1) * sizeof(float));
+    }
 
     // Stop communication timer
     double communicationStop = MPI_Wtime();
@@ -137,6 +172,10 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
 }
 
 void masterStaticSquareBlocks(ConfigData* data, float* pixels) {
+    MPI_Status status;
+    int tasks;
+    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
+
     //Start computation timer.
     double computationStart = MPI_Wtime();
 
@@ -180,6 +219,10 @@ void masterStaticSquareBlocks(ConfigData* data, float* pixels) {
 }
 
 void masterStaticCyclicalRows(ConfigData* data, float* pixels) {
+    MPI_Status status;
+    int tasks;
+    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
+
     //Start computation timer.
     double computationStart = MPI_Wtime();
 

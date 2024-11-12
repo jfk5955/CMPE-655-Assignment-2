@@ -16,6 +16,10 @@ void slaveMain(ConfigData* data)
         case PART_MODE_NONE:
             //The slave will do nothing since this means sequential operation.
             break;
+        
+        case PART_MODE_STATIC_STRIPS_VERTICAL:
+            slaveStaticContinuousColumns(data);
+            break;
 
         default:
             std::cout << "This mode (" << data->partitioningMode;
@@ -25,17 +29,34 @@ void slaveMain(ConfigData* data)
 }
 
 void slaveStaticContinuousColumns(ConfigData* data) {
+    int tasks, rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
+
     double comp_start, comp_stop, comp_time;
     comp_start = MPI_Wtime();
 
     // Describe our region
+    int subregionWidth, ourWidth;
+    subregionWidth = data->width / tasks;
+
+    // Last slave handles remainder, if work is evenly distributed this
+    // overlaps with other slaves' communication
+    if(rank == tasks - 1) {
+        // we're last
+        outWidth = subregionWidth + (data->width % tasks);
+    } else {
+        // we're not last
+        ourWidth = subregionWidth;
+    }
+
     RenderRegion region;
-    //region.xInImage = TODO
-    //region.yInImage = TODO
+    region.xInImage = subregionWidth * rank;
+    region.yInImage = 0;
     region.xInPixels = 0;
     region.yInPixels = 0;
-    //region.width = TODO
-    //region.height = TODO
+    region.width = ourWidth;
+    region.height = data->height;
     region.pixelsWidth = region.width;
     region.pixelsHeight = region.height;
 
@@ -51,10 +72,14 @@ void slaveStaticContinuousColumns(ConfigData* data) {
     comp_time = comp_stop - comp_start;
 
     region.pixels[pixelsSize - 1] = (float) comp_time;
-    MPI_Send(region.pixels, pixelsSize, MPI_FLOAT, 0, 0, MPI_WORLD);
+    MPI_Send(region.pixels, pixelsSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
 }
 
 void slaveStaticSquareBlocks(ConfigData* data) {
+    int tasks, rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
+
     double comp_start, comp_stop, comp_time;
     comp_start = MPI_Wtime();
 
@@ -81,10 +106,14 @@ void slaveStaticSquareBlocks(ConfigData* data) {
     comp_time = comp_stop - comp_start;
 
     region.pixels[pixelsSize - 1] = (float) comp_time;
-    MPI_Send(region.pixels, pixelsSize, MPI_FLOAT, 0, 0, MPI_WORLD);
+    MPI_Send(region.pixels, pixelsSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
 }
 
 void slaveStaticCyclicalRows(ConfigData* data) {
+    int tasks, rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
+
     double comp_start, comp_stop, comp_time;
     comp_start = MPI_Wtime();
 
@@ -111,7 +140,7 @@ void slaveStaticCyclicalRows(ConfigData* data) {
     comp_time = comp_stop - comp_start;
 
     region.pixels[pixelsSize - 1] = (float) comp_time;
-    MPI_Send(region.pixels, pixelsSize, MPI_FLOAT, 0, 0, MPI_WORLD);
+    MPI_Send(region.pixels, pixelsSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
 }
 
 void slaveDynamicCentralizedQueue(ConfigData* data) {
