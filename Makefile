@@ -23,7 +23,7 @@ SEQ_SRC := $(addprefix src/,$(SEQ_SRC))
 ################################################################################
 # Variables used by MPI code.
 MPI_BIN = raytrace_mpi
-MPI_SRC = master.cpp main_mpi.cpp slave.cpp
+MPI_SRC = master.cpp main_mpi.cpp slave.cpp common.cpp
 
 MPI_SRC := $(addprefix src/,$(MPI_SRC))
 ################################################################################

@@ -12,7 +12,7 @@ void renderRegion(ConfigData* data, RenderRegion* region) {
             int ix = region->xInImage + rx;
             int iy = region->yInImage + ry;
             int px = region->xInPixels + rx;
-            int py = region->YInPixels + ry;
+            int py = region->yInPixels + ry;
 
             // Get index in pixels
             int baseIndex = 3 * ((py * region->pixelsWidth) + px);
