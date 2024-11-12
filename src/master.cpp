@@ -2,9 +2,11 @@
 
 #include <iostream>
 #include <mpi.h>
+#include <cstring>
 
 #include "RayTrace.h"
 #include "master.h"
+#include "common.h"
 
 void masterMain(ConfigData* data)
 {
@@ -156,7 +158,7 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
         int offset = slaveXInImage * data->width;
 
         // Copy into output buffer
-        memcopy(&(pixels[offset]), recieveBuffer, (recieveSize - 1) * sizeof(float));
+        memcpy(&(pixels[offset]), recieveBuffer, (recieveSize - 1) * sizeof(float));
     }
 
     // Stop communication timer

@@ -44,7 +44,7 @@ void slaveStaticContinuousColumns(ConfigData* data) {
     // overlaps with other slaves' communication
     if(rank == tasks - 1) {
         // we're last
-        outWidth = subregionWidth + (data->width % tasks);
+        ourWidth = subregionWidth + (data->width % tasks);
     } else {
         // we're not last
         ourWidth = subregionWidth;
@@ -61,7 +61,7 @@ void slaveStaticContinuousColumns(ConfigData* data) {
     region.pixelsHeight = region.height;
 
     // Pixels includes 1 extra entry for computation time
-    int pixelsSize = (3 * region.pixelsWidth * region.pixelsHeight) + 1
+    int pixelsSize = (3 * region.pixelsWidth * region.pixelsHeight) + 1;
     region.pixels = new float[pixelsSize];
 
     // Render our region
@@ -95,7 +95,7 @@ void slaveStaticSquareBlocks(ConfigData* data) {
     region.pixelsHeight = region.height;
 
     // Pixels includes 1 extra entry for computation time
-    int pixelsSize = (3 * region.pixelsWidth * region.pixelsHeight) + 1
+    int pixelsSize = (3 * region.pixelsWidth * region.pixelsHeight) + 1;
     region.pixels = new float[pixelsSize];
 
     // Render our region
@@ -129,7 +129,7 @@ void slaveStaticCyclicalRows(ConfigData* data) {
     //region.pixelsHeight = TODO
 
     // Pixels includes 1 extra entry for computation time
-    int pixelsSize = (3 * region.pixelsWidth * region.pixelsHeight) + 1
+    int pixelsSize = (3 * region.pixelsWidth * region.pixelsHeight) + 1;
     region.pixels = new float[pixelsSize];
 
     // Render our region
