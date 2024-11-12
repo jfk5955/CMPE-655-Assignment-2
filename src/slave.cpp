@@ -15,9 +15,26 @@ void slaveMain(ConfigData* data)
         case PART_MODE_NONE:
             //The slave will do nothing since this means sequential operation.
             break;
+
         default:
             std::cout << "This mode (" << data->partitioningMode;
             std::cout << ") is not currently implemented." << std::endl;
             break;
     }
+}
+
+void slaveStaticContinuousColumns(ConfigData* data) {
+    // TODO
+}
+
+void slaveStaticSquareBlocks(ConfigData* data) {
+    // TODO
+}
+
+void slaveStaticCyclicalRows(ConfigData* data) {
+    // TODO
+}
+
+void slaveDynamicCentralizedQueue(ConfigData* data) {
+    // TODO
 }

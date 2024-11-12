@@ -92,3 +92,19 @@ void masterSequential(ConfigData* data, float* pixels)
     double c2cRatio = communicationTime / computationTime;
     std::cout << "C-to-C Ratio: " << c2cRatio << std::endl;
 }
+
+void masterStaticContinuousColumns(ConfigData* data) {
+    // TODO
+}
+
+void masterStaticSquareBlocks(ConfigData* data) {
+    // TODO
+}
+
+void masterStaticCyclicalRows(ConfigData* data) {
+    // TODO
+}
+
+void masterDynamicCentralizedQueue(ConfigData* data) {
+    // TODO
+}
