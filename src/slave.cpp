@@ -4,6 +4,7 @@
 #include <mpi.h>
 #include "RayTrace.h"
 #include "slave.h"
+#include "common.h"
 
 void slaveMain(ConfigData* data)
 {
@@ -24,15 +25,93 @@ void slaveMain(ConfigData* data)
 }
 
 void slaveStaticContinuousColumns(ConfigData* data) {
-    // TODO
+    double comp_start, comp_stop, comp_time;
+    comp_start = MPI_Wtime();
+
+    // Describe our region
+    RenderRegion region;
+    //region.xInImage = TODO
+    //region.yInImage = TODO
+    region.xInPixels = 0;
+    region.yInPixels = 0;
+    //region.width = TODO
+    //region.height = TODO
+    region.pixelsWidth = region.width;
+    region.pixelsHeight = region.height;
+
+    // Pixels includes 1 extra entry for computation time
+    int pixelsSize = (3 * region.pixelsWidth * region.pixelsHeight) + 1
+    region.pixels = new float[pixelsSize];
+
+    // Render our region
+    renderRegion(data, &region);
+
+    // Send our results
+    comp_stop = MPI_Wtime();
+    comp_time = comp_stop - comp_start;
+
+    region.pixels[pixelsSize - 1] = (float) comp_time;
+    MPI_Send(region.pixels, pixelsSize, MPI_FLOAT, 0, 0, MPI_WORLD);
 }
 
 void slaveStaticSquareBlocks(ConfigData* data) {
-    // TODO
+    double comp_start, comp_stop, comp_time;
+    comp_start = MPI_Wtime();
+
+    // Describe our region
+    RenderRegion region;
+    //region.xInImage = TODO
+    //region.yInImage = TODO
+    region.xInPixels = 0;
+    region.yInPixels = 0;
+    //region.width = TODO
+    //region.height = TODO
+    region.pixelsWidth = region.width;
+    region.pixelsHeight = region.height;
+
+    // Pixels includes 1 extra entry for computation time
+    int pixelsSize = (3 * region.pixelsWidth * region.pixelsHeight) + 1
+    region.pixels = new float[pixelsSize];
+
+    // Render our region
+    renderRegion(data, &region);
+
+    // Send our results
+    comp_stop = MPI_Wtime();
+    comp_time = comp_stop - comp_start;
+
+    region.pixels[pixelsSize - 1] = (float) comp_time;
+    MPI_Send(region.pixels, pixelsSize, MPI_FLOAT, 0, 0, MPI_WORLD);
 }
 
 void slaveStaticCyclicalRows(ConfigData* data) {
-    // TODO
+    double comp_start, comp_stop, comp_time;
+    comp_start = MPI_Wtime();
+
+    // Describe our region
+    RenderRegion region;
+    //region.xInImage = TODO
+    //region.yInImage = TODO
+    region.xInPixels = 0;
+    region.yInPixels = 0;
+    //region.width = TODO
+    //region.height = TODO
+    //region.pixelsWidth = TODO
+    //region.pixelsHeight = TODO
+
+    // Pixels includes 1 extra entry for computation time
+    int pixelsSize = (3 * region.pixelsWidth * region.pixelsHeight) + 1
+    region.pixels = new float[pixelsSize];
+
+    // Render our region
+    // TODO - some kind of loop which does each sub-region
+
+    // Send our results
+    comp_stop = MPI_Wtime();
+    comp_time = comp_stop - comp_start;
+
+    region.pixels[pixelsSize - 1] = (float) comp_time;
+    MPI_Send(region.pixels, pixelsSize, MPI_FLOAT, 0, 0, MPI_WORLD);
 }
 
 void slaveDynamicCentralizedQueue(ConfigData* data) {
