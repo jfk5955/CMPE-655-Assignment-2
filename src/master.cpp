@@ -141,12 +141,14 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
     float* recieveBuffer = new float[(3 * (subregionWidth + subregionRemainder) * data->height) + 1];
     for(int i = 1; i < tasks; i++) {
         // Recieve data from slave
-        int recieveSize = (3 * subregionWidth * data->height) + 1;
-        
+        int recieveWidth = subregionWidth;
+
         if(i == tasks - 1) {
             // Last slave has remainder as well
-            recieveSize += 3 * subregionRemainder * data->height;
+            recieveWidth += 3 * subregionRemainder * data->height;
         }
+
+        int recieveSize = (3 * subregionWidth * data->height) + 1;
 
         MPI_Recv(recieveBuffer, recieveSize, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
         
@@ -155,10 +157,14 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
 
         // Determine location in output
         int slaveXInImage = subregionWidth * i;
-        int offset = slaveXInImage * data->width;
 
-        // Copy into output buffer
-        memcpy(&(pixels[offset]), recieveBuffer, (recieveSize - 1) * sizeof(float));
+        // Move into output buffer
+        // Move row-by-row as recieved region is much thinner than the image
+        for(int y = 0; y < data->height; y++) {
+            int pixelsRowOffset = 3 * (slaveXInImage + (y * data->width));
+            int recievedRowOffset = 3 * y * recieveWidth);
+            memcpy(&(pixels[pixelsRowOffset]), &(recieveBuffer[recievedRowOffset]), recieveWidth * sizeof(float));
+        }
     }
 
     // Stop communication timer
