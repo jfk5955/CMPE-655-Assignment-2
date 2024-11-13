@@ -104,14 +104,12 @@ void masterSequential(ConfigData* data, float* pixels)
 
 void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
     MPI_Status status;
-    int tasks;
-    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
 
     //Start computation timer.
     double computationStart = MPI_Wtime();
 
-    int subregionWidth = data->width / tasks;
-    int subregionRemainder = data->width % tasks;
+    int subregionWidth = data->width / data->mpi_procs;
+    int subregionRemainder = data->width % data->mpi_procs;
 
     // Compute our portion of the region
     // Describe our region
@@ -139,11 +137,11 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
     // Recieve subregions
     // Buffer with enough space for the largest subregion and the time report
     float* recieveBuffer = new float[(3 * (subregionWidth + subregionRemainder) * data->height) + 1];
-    for(int i = 1; i < tasks; i++) {
+    for(int i = 1; i < data->mpi_procs; i++) {
         // Recieve data from slave
         int recieveWidth = subregionWidth;
 
-        if(i == tasks - 1) {
+        if(i == data->mpi_procs - 1) {
             // Last slave has remainder as well
             recieveWidth += 3 * subregionRemainder * data->height;
         }
@@ -181,8 +179,6 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
 
 void masterStaticSquareBlocks(ConfigData* data, float* pixels) {
     MPI_Status status;
-    int tasks;
-    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
 
     //Start computation timer.
     double computationStart = MPI_Wtime();
@@ -228,8 +224,6 @@ void masterStaticSquareBlocks(ConfigData* data, float* pixels) {
 
 void masterStaticCyclicalRows(ConfigData* data, float* pixels) {
     MPI_Status status;
-    int tasks;
-    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
 
     //Start computation timer.
     double computationStart = MPI_Wtime();

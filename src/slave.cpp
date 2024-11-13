@@ -29,29 +29,25 @@ void slaveMain(ConfigData* data)
 }
 
 void slaveStaticContinuousColumns(ConfigData* data) {
-    int tasks, rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
-
     double comp_start, comp_stop, comp_time;
     comp_start = MPI_Wtime();
 
     // Describe our region
     int subregionWidth, ourWidth;
-    subregionWidth = data->width / tasks;
+    subregionWidth = data->width / data->mpi_procs;
 
     // Last slave handles remainder, if work is evenly distributed this
     // overlaps with other slaves' communication
-    if(rank == tasks - 1) {
+    if(data->mpi_rank == data->mpi_procs - 1) {
         // we're last
-        ourWidth = subregionWidth + (data->width % tasks);
+        ourWidth = subregionWidth + (data->width % data->mpi_procs);
     } else {
         // we're not last
         ourWidth = subregionWidth;
     }
 
     RenderRegion region;
-    region.xInImage = subregionWidth * rank;
+    region.xInImage = subregionWidth * data->mpi_rank;
     region.yInImage = 0;
     region.xInPixels = 0;
     region.yInPixels = 0;
@@ -76,10 +72,6 @@ void slaveStaticContinuousColumns(ConfigData* data) {
 }
 
 void slaveStaticSquareBlocks(ConfigData* data) {
-    int tasks, rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
-
     double comp_start, comp_stop, comp_time;
     comp_start = MPI_Wtime();
 
@@ -110,10 +102,6 @@ void slaveStaticSquareBlocks(ConfigData* data) {
 }
 
 void slaveStaticCyclicalRows(ConfigData* data) {
-    int tasks, rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &tasks);
-
     double comp_start, comp_stop, comp_time;
     comp_start = MPI_Wtime();
 
