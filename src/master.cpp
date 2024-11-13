@@ -162,8 +162,8 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
         // Move row-by-row as recieved region is much thinner than the image
         for(int y = 0; y < data->height; y++) {
             int pixelsRowOffset = 3 * (slaveXInImage + (y * data->width));
-            int recievedRowOffset = 3 * y * recieveWidth);
-            memcpy(&(pixels[pixelsRowOffset]), &(recieveBuffer[recievedRowOffset]), recieveWidth * sizeof(float));
+            int recievedRowOffset = 3 * y * recieveWidth;
+            memcpy(&(pixels[pixelsRowOffset]), &(recieveBuffer[recievedRowOffset]), 3 * recieveWidth * sizeof(float));
         }
     }
 
