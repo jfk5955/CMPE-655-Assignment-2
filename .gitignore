@@ -1,5 +1,6 @@
 
 renders/*
+std/*
 
 png_compare
 raytrace_mpi
