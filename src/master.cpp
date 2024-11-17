@@ -50,6 +50,12 @@ void masterMain(ConfigData* data)
             masterStaticCyclicalRows(data, pixels);
             stopTime = MPI_Wtime();
             break;
+        
+        case PART_MODE_DYNAMIC:
+            startTime = MPI_Wtime();
+            masterDynamicCentralizedQueue(data, pixels);
+            stopTime = MPI_Wtime();
+            break;
 
         default:
             std::cout << "This mode (" << data->partitioningMode;
@@ -170,7 +176,7 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
             memcpy(&(pixels[pixelsRowOffset]), &(recieveBuffer[recievedRowOffset]), 3 * recieveWidth * sizeof(float));
         }
     }
-    
+
     delete[] recieveBuffer;
 
     // Stop communication timer
@@ -278,7 +284,7 @@ void masterStaticCyclicalRows(ConfigData* data, float* pixels) {
 
     float** slaveRegions = new float*[data->mpi_procs - 1];
 
-    // Recieve reach set of regions
+    // Recieve each set of regions
     for(int i = 1; i < data->mpi_procs; i++) {
         slaveRegions[i - 1] = new float[slaveRegionSize];
         MPI_Recv(slaveRegions[i - 1], slaveRegionSize, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
@@ -343,5 +349,124 @@ void masterStaticCyclicalRows(ConfigData* data, float* pixels) {
 }
 
 void masterDynamicCentralizedQueue(ConfigData* data, float* pixels) {
-    // TODO
+    MPI_Status status;
+    double computationTime = 0.0;
+    double communicationStart = MPI_Wtime();
+
+    /*
+     * 1.   Distribute initial work
+     * 2.   Recv from MPI_ANY_SOURCE a results packet, consisting (width * height) + 3 floats:
+     *          data_array, x, y, time
+     * 3.   Send to the rank we got the packet from a work packet, consisting of 2 ints:
+     *          x, y
+     *      If no work is remaining, -1 -1 is sent and the rank is marked as done
+     * 4.   Copy recieved packet data into image
+     * 5.   If any ranks are not done, continue from 2.
+     */
+
+    int resultsSize = (3 * data->dynamicBlockWidth * data->dynamicBlockHeight) + 3;
+    float* resultsPacket = new float[resultsSize];
+
+    int* workPacket = new int[2];
+    workPacket[0] = 0;  // x
+    workPacket[1] = 0;  // y
+
+    // Distribute initial work
+    for(int i = 1; i < data->mpi_procs; i++) {
+        MPI_Send(workPacket, 2, MPI_INT, i, 0, MPI_COMM_WORLD);
+        incrementWorkPacket(data, workPacket);
+    }
+
+    // Work-sending loop
+    while(workPacket[0] != -1) {
+        // Recieve results packet
+        MPI_Recv(resultsPacket, resultsSize, MPI_FLOAT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+
+        // Send new work
+        MPI_Send(workPacket, 2, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
+
+        // Copy into image
+        int imageX = (int) resultsPacket[resultsSize - 3];
+        int imageY = (int) resultsPacket[resultsSize - 2];
+        computationTime += (double) resultsPacket[resultsSize - 1];
+
+        int copyWidth = data->dynamicBlockWidth;
+        if(imageX + copyWidth >= data->width) {
+            copyWidth = data->width - imageX;
+        }
+
+        // Copy each row
+        for(int resultsY = 0; resultsY < data->dynamicBlockHeight && imageY < data->height; resultsY++, imageY++) {
+            int resultsOffset = 3 * resultsY * data->dynamicBlockWidth;
+            int pixelsOffset = 3 * ((imageY * data->width) + imageX);
+
+            memcpy(&(pixels[pixelsOffset]), &(resultsPacket[resultsOffset]), 3 * copyWidth * sizeof(float));
+        }
+
+        incrementWorkPacket(data, workPacket);
+    }
+
+    // Results-waiting loop
+    for(int i = 1; i < data->mpi_procs; i++) {
+        // Recieve results packet
+        MPI_Recv(resultsPacket, resultsSize, MPI_FLOAT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+
+        // Send termination packet
+        MPI_Send(workPacket, 2, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
+
+        // Copy into image
+        int imageX = (int) resultsPacket[resultsSize - 3];
+        int imageY = (int) resultsPacket[resultsSize - 2];
+        computationTime += (double) resultsPacket[resultsSize - 1];
+
+        int copyWidth = data->dynamicBlockWidth;
+        if(imageX + copyWidth >= data->width) {
+            copyWidth = data->width - imageX;
+        }
+
+        // Copy each row
+        for(int resultsY = 0; resultsY < data->dynamicBlockHeight && imageY < data->height; resultsY++, imageY++) {
+            int resultsOffset = 3 * resultsY * data->dynamicBlockWidth;
+            int pixelsOffset = 3 * ((imageY * data->width) + imageX);
+
+            memcpy(&(pixels[pixelsOffset]), &(resultsPacket[resultsOffset]), 3 * copyWidth * sizeof(float));
+        }
+
+        incrementWorkPacket(data, workPacket);
+    }
+
+    // Clean up
+    delete[] workPacket;
+    delete[] resultsPacket;
+
+    // Stop communication timer
+    double communicationStop = MPI_Wtime();
+    double communicationTime = communicationStop - communicationStart;
+
+    // Print times & c-to-c ratio
+    // Copied from given sequential code
+    std::cout << "Total Computation Time: " << computationTime << " seconds" << std::endl;
+    std::cout << "Total Communication Time: " << communicationTime << " seconds" << std::endl;
+    double c2cRatio = communicationTime / computationTime;
+    std::cout << "C-to-C Ratio: " << c2cRatio << std::endl;
+}
+
+void incrementWorkPacket(ConfigData* data, int* workPacket) {
+    if(workPacket[0] == -1) {
+        return;
+    }
+
+    // Increment in x
+    workPacket[0] += data->dynamicBlockWidth;
+    if(workPacket[0] >= data->width) {
+        // Packet ends up starting out of bounds. Increment in y
+        workPacket[0] = 0;
+        workPacket[1] += data->dynamicBlockHeight;
+
+        // Packet ends up starting out of bounds. We're done.
+        if(workPacket[1] >= data->height) {
+            workPacket[0] = -1;
+            workPacket[1] = -1;
+        }
+    }
 }

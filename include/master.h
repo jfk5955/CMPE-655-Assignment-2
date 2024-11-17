@@ -57,4 +57,12 @@ void masterStaticCyclicalRows(ConfigData* data, float* pixels);
  */
 void masterDynamicCentralizedQueue(ConfigData* data, float* pixels);
 
+/**
+ * Increments the work packet for dynamic partitioning
+ * 
+ * @param data Scene information
+ * @param workPacket work packet
+ */
+void incrementWorkPacket(ConfigData* data, int* workPacket);
+
 #endif

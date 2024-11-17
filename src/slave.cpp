@@ -24,6 +24,10 @@ void slaveMain(ConfigData* data)
         case PART_MODE_STATIC_CYCLES_HORIZONTAL:
             slaveStaticCyclicalRows(data);
             break;
+        
+        case PART_MODE_DYNAMIC:
+            slaveDynamicCentralizedQueue(data);
+            break;
 
         default:
             std::cout << "This mode (" << data->partitioningMode;
@@ -156,5 +160,72 @@ void slaveStaticCyclicalRows(ConfigData* data) {
 }
 
 void slaveDynamicCentralizedQueue(ConfigData* data) {
-    // TODO
+    double comp_start, comp_stop, comp_time;
+    MPI_Status status;
+
+    // Describe the region of a tile
+    RenderRegion region;
+    region.xInPixels = 0;
+    region.yInPixels = 0;
+    region.pixelsWidth = data->dynamicBlockWidth;
+    region.pixelsHeight = data->dynamicBlockHeight;
+
+    // Pixels includes 3 extra entries for x, y, computation time
+    int pixelsSize = (3 * region.pixelsWidth * region.pixelsHeight) + 3;
+    region.pixels = new float[pixelsSize];
+
+    int* workPacket = new int[2];
+
+    /*
+     * 1.   Recieve initial work
+     * 2.   Render tile
+     * 3.   Send rendered data to master as (array, x, y, time) floats
+     * 4.   Recieve more work as (x y) ints
+     * 5.   If -1 -1 not recieved, continue from 2.
+     */
+
+    while(true) {
+        // Recieve work
+        MPI_Recv(workPacket, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+
+        // Are we done
+        if(workPacket[0] == -1) {
+            break;
+        }
+
+        comp_start = MPI_Wtime();
+
+        // Not done. Render a tile
+        region.xInImage = workPacket[0];
+        region.yInImage = workPacket[1];
+
+        // Don't render out of bounds
+        if(region.xInImage + data->dynamicBlockWidth >= data->width) {
+            region.width = data->width - region.xInImage;
+        } else {
+            region.width = data->dynamicBlockWidth;
+        }
+
+        if(region.yInImage + data->dynamicBlockHeight >= data->height) {
+            region.height = data->height - region.yInImage;
+        } else {
+            region.height = data->dynamicBlockHeight;
+        }
+
+        // Render
+        renderRegion(data, &region);
+
+        // Report results
+        comp_stop = MPI_Wtime();
+        comp_time = comp_stop - comp_start;
+
+        region.pixels[pixelsSize - 3] = (float) region.xInImage;
+        region.pixels[pixelsSize - 2] = (float) region.yInImage;
+        region.pixels[pixelsSize - 1] = (float) comp_time;
+        MPI_Send(region.pixels, pixelsSize, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+    }
+
+    // clean up
+    delete[] region.pixels;
+    delete[] workPacket;
 }
