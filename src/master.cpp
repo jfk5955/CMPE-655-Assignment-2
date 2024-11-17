@@ -44,6 +44,12 @@ void masterMain(ConfigData* data)
             masterStaticContinuousColumns(data, pixels);
             stopTime = MPI_Wtime();
             break;
+        
+        case PART_MODE_STATIC_CYCLES_HORIZONTAL:
+            startTime = MPI_Wtime();
+            masterStaticCyclicalRows(data, pixels);
+            stopTime = MPI_Wtime();
+            break;
 
         default:
             std::cout << "This mode (" << data->partitioningMode;
@@ -164,6 +170,8 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
             memcpy(&(pixels[pixelsRowOffset]), &(recieveBuffer[recievedRowOffset]), 3 * recieveWidth * sizeof(float));
         }
     }
+    
+    delete[] recieveBuffer;
 
     // Stop communication timer
     double communicationStop = MPI_Wtime();
@@ -231,19 +239,29 @@ void masterStaticCyclicalRows(ConfigData* data, float* pixels) {
     // Compute our portion of the region
     // Describe our region
     RenderRegion region;
-    //region.xInImage = TODO
-    //region.yInImage = TODO
+    region.xInImage = 0;
+    region.yInImage = 0;
     region.xInPixels = 0;
     region.yInPixels = 0;
-    //region.width = TODO
-    //region.height = TODO
-    //region.pixelsWidth = TODO
-    //region.pixelsHeight = TODO
-
+    region.width = data->width;
+    region.height = data->cycleSize;
+    region.pixelsWidth = data->width;
+    region.pixelsHeight = data->height;
     region.pixels = pixels;
 
     // Render our region
-    // TODO - some kind of loop which does each of our sub-regions
+    while(region.yInImage < data->height) {
+        // Make sure we don't overrun
+        if(region.yInImage + data->cycleSize >= data->height) {
+            region.height = data->height - region.yInImage;
+        }
+
+        // Render subregion
+        renderRegion(data, &region);
+
+        region.yInImage += data->cycleSize * data->mpi_procs;
+        region.yInPixels += data->cycleSize * data->mpi_procs;
+    }
 
     // Stop computation timer
     double computationStop = MPI_Wtime();
@@ -253,9 +271,64 @@ void masterStaticCyclicalRows(ConfigData* data, float* pixels) {
     double communicationStart = MPI_Wtime();
     
     // Recieve subregions
-    // TODO - will be a bit more complicated as slaves pack their subregions
-    // Might change to have slaves send each of their subregions separately,
-    // but that makes timing things more annoying
+    int totalSubregions = (data->height / data->cycleSize) + ((data->height % data->cycleSize != 0) ? 1 : 0);
+    int maxSubregions = (totalSubregions / data->mpi_procs) + 1;
+    int slaveRegionHeight = maxSubregions * data->cycleSize;
+    int slaveRegionSize = (3 * data->width * slaveRegionHeight) + 1;
+
+    float** slaveRegions = new float*[data->mpi_procs - 1];
+
+    // Recieve reach set of regions
+    for(int i = 1; i < data->mpi_procs; i++) {
+        slaveRegions[i - 1] = new float[slaveRegionSize];
+        MPI_Recv(slaveRegions[i - 1], slaveRegionSize, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
+
+        // Include slave computation time
+        computationTime += (double) slaveRegions[i - 1][slaveRegionSize - 1];
+    }
+
+    // Move regions into image
+    int subregionNumber = 1;
+    int imageStartY = data->cycleSize;
+    int slaveStartY = 0;
+
+    while(imageStartY < data->height) {
+        // Where are we getting data from
+        int rank = subregionNumber % data->mpi_procs;
+
+        if(rank == 0) {
+            // Us. No copy
+            slaveStartY += data->cycleSize;
+            imageStartY += data->cycleSize;
+            subregionNumber++;
+            continue;
+        }
+
+        // Slave. Copy
+        int imageIndex = 3 * data->width * imageStartY;
+        int slaveIndex = 3 * data->width * slaveStartY;
+        int height = data->cycleSize;
+
+        // Don't overrun
+        if(imageStartY + height >= data->height) {
+            height = data->height - imageStartY;
+        }
+
+        int copySize = 3 * data->width * height * sizeof(float);
+
+        float* slaveRegion = slaveRegions[rank - 1];
+        memcpy(&(pixels[imageIndex]), &(slaveRegion[slaveIndex]), copySize);
+
+        imageStartY += data->cycleSize;
+        subregionNumber++;
+    }
+
+    // Clean up
+    for(int i = 0; i < data->mpi_procs - 1; i++) {
+        delete[] slaveRegions[i];
+    }
+
+    delete[] slaveRegions;
 
     // Stop communication timer
     double communicationStop = MPI_Wtime();
