@@ -143,10 +143,10 @@ void masterStaticContinuousColumns(ConfigData* data, float* pixels) {
 
         if(i == data->mpi_procs - 1) {
             // Last slave has remainder as well
-            recieveWidth += 3 * subregionRemainder * data->height;
+            recieveWidth += subregionRemainder;
         }
 
-        int recieveSize = (3 * subregionWidth * data->height) + 1;
+        int recieveSize = (3 * recieveWidth * data->height) + 1;
 
         MPI_Recv(recieveBuffer, recieveSize, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
         
