@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <mpi.h>
+#include <math.h>
+
 #include "RayTrace.h"
 #include "slave.h"
 #include "common.h"
@@ -27,6 +29,10 @@ void slaveMain(ConfigData* data)
         
         case PART_MODE_DYNAMIC:
             slaveDynamicCentralizedQueue(data);
+            break;
+
+        case PART_MODE_STATIC_BLOCKS:
+            slaveStaticSquareBlocks(data);
             break;
 
         default:
@@ -85,13 +91,29 @@ void slaveStaticSquareBlocks(ConfigData* data) {
     comp_start = MPI_Wtime();
 
     // Describe our region
+    int subregionWidth, subregionHeight, ourWidth, ourHeight;
+    subregionWidth = data->width / ((int)sqrt(data->mpi_procs));
+    subregionHeight = data->height / ((int)sqrt(data->mpi_procs));
+
+    // Last slave handles remainder, if work is evenly distributed this
+    // overlaps with other slaves' communication
+    if(data->mpi_rank == data->mpi_procs - 1) {
+        // we're last
+        ourWidth = subregionWidth + (data->width % ((int)sqrt(data->mpi_procs)));
+        ourHeight = subregionHeight + (data->height % ((int)sqrt(data->mpi_procs)));
+    } else {
+        // we're not last
+        ourWidth = subregionWidth;
+        ourHeight = subregionHeight;
+    }
+
     RenderRegion region;
-    //region.xInImage = TODO
-    //region.yInImage = TODO
+    region.xInImage = subregionWidth * (data->mpi_rank % (int)sqrt(data->mpi_procs));
+    region.yInImage = subregionHeight * (data->mpi_rank / (int)sqrt(data->mpi_procs));
     region.xInPixels = 0;
     region.yInPixels = 0;
-    //region.width = TODO
-    //region.height = TODO
+    region.width = ourWidth;
+    region.height = ourHeight;
     region.pixelsWidth = region.width;
     region.pixelsHeight = region.height;
 

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <mpi.h>
 #include <cstring>
+#include <math.h>
 
 #include "RayTrace.h"
 #include "master.h"
@@ -54,6 +55,12 @@ void masterMain(ConfigData* data)
         case PART_MODE_DYNAMIC:
             startTime = MPI_Wtime();
             masterDynamicCentralizedQueue(data, pixels);
+            stopTime = MPI_Wtime();
+            break;
+            
+        case PART_MODE_STATIC_BLOCKS:
+            startTime = MPI_Wtime();
+            masterStaticSquareBlocks(data, pixels);
             stopTime = MPI_Wtime();
             break;
 
@@ -197,15 +204,21 @@ void masterStaticSquareBlocks(ConfigData* data, float* pixels) {
     //Start computation timer.
     double computationStart = MPI_Wtime();
 
+    int subregionWidth = data->width / ((int)sqrt(data->mpi_procs));
+    int subregionWidthRemainder = data->width % ((int)sqrt(data->mpi_procs));
+    
+    int subregionHeight = data->height / ((int)sqrt(data->mpi_procs));
+    int subregionHeightRemainder = data->height % ((int)sqrt(data->mpi_procs));
+
     // Compute our portion of the region
     // Describe our region
     RenderRegion region;
-    //region.xInImage = TODO
-    //region.yInImage = TODO
+    region.xInImage = 0;
+    region.yInImage = 0;
     region.xInPixels = 0;
     region.yInPixels = 0;
-    //region.width = TODO
-    //region.height = TODO
+    region.width = subregionWidth;
+    region.height = subregionHeight;
     region.pixelsWidth = region.width;
     region.pixelsHeight = region.height;
 
@@ -222,7 +235,37 @@ void masterStaticSquareBlocks(ConfigData* data, float* pixels) {
     double communicationStart = MPI_Wtime();
     
     // Recieve subregions
-    // TODO
+    // Buffer with enough space for the largest subregion and the time report
+    float* recieveBuffer = new float[(3 * (subregionWidth + subregionWidthRemainder) * (subregionHeight + subregionHeightRemainder)) + 1];
+    for(int i = 1; i < data->mpi_procs; i++) {
+        // Recieve data from slave
+        int recieveWidth = subregionWidth;
+        int recieveHeight = subregionHeight;
+
+        if(i == data->mpi_procs - 1) {
+            // Last slave has remainder as well
+            recieveWidth += subregionWidthRemainder;
+            recieveHeight += subregionHeightRemainder;
+        }
+
+        int recieveSize = (3 * recieveWidth * recieveHeight) + 1;
+
+        MPI_Recv(recieveBuffer, recieveSize, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
+        
+        // Include slave computation time
+        computationTime += (double) recieveBuffer[recieveSize - 1];
+
+        // Determine location in output
+        int slaveXInImage = subregionWidth * (i % (int)sqrt(data->mpi_procs));
+        int slaveYInImage = subregionHeight * (i / (int)sqrt(data->mpi_procs));
+
+        // Move into output buffer
+        for(int y = 0; y < recieveHeight; y++) {
+            int pixelsRowOffset = 3 * (slaveXInImage + ((y + slaveYInImage) * data->width));
+            int recievedRowOffset = 3 * y * recieveWidth;
+            memcpy(&(pixels[pixelsRowOffset]), &(recieveBuffer[recievedRowOffset]), 3 * recieveWidth * sizeof(float));
+        }
+    }
 
     // Stop communication timer
     double communicationStop = MPI_Wtime();
