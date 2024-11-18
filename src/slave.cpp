@@ -193,9 +193,8 @@ void slaveDynamicCentralizedQueue(ConfigData* data) {
             break;
         }
 
-        comp_start = MPI_Wtime();
-
         // Not done. Render a tile
+        comp_start = MPI_Wtime();
         region.xInImage = workPacket[0];
         region.yInImage = workPacket[1];
 

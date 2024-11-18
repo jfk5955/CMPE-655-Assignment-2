@@ -431,8 +431,6 @@ void masterDynamicCentralizedQueue(ConfigData* data, float* pixels) {
 
             memcpy(&(pixels[pixelsOffset]), &(resultsPacket[resultsOffset]), 3 * copyWidth * sizeof(float));
         }
-
-        incrementWorkPacket(data, workPacket);
     }
 
     // Clean up
